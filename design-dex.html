@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Dex — Media Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;600;700&family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #ffffff;
+  --bg-mid: #f5f5f5;
+  --glass: rgba(0,0,0,0.04);
+  --glass-border: rgba(0,0,0,0.10);
+  --glass-hover: rgba(0,0,0,0.07);
+  --accent-blue: #111111;
+  --accent-purple: #333333;
+  --accent-cyan: #222222;
+  --accent-pink: #444444;
+  --text-primary: rgba(0,0,0,0.92);
+  --text-secondary: rgba(0,0,0,0.5);
+  --text-muted: rgba(0,0,0,0.32);
+  --glow-blue: 0 0 20px rgba(0,0,0,0.12);
+  --glow-purple: 0 0 20px rgba(0,0,0,0.10);
+  --radius: 18px;
+  --radius-sm: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden;
+}
+
+/* Animated background orbs */
+.bg-orbs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  animation: orb-drift 12s ease-in-out infinite alternate;
+}
+
+.orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(0,0,0,0.07), transparent); top: -150px; left: -100px; animation-delay: 0s; }
+.orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(0,0,0,0.05), transparent); bottom: -100px; right: -100px; animation-delay: -4s; }
+.orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(0,0,0,0.04), transparent); top: 40%; left: 40%; animation-delay: -8s; }
+
+@keyframes orb-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(40px, -30px) scale(1.1); }
+}
+
+/* Layout */
+.app {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: 72px 1fr 300px;
+  height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ── */
+.header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 10;
+}
+
+.logo {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 1.25rem;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, #000000, #444444, #000000);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.header-pill {
+  padding: 0.3rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.header-pill:hover, .header-pill.active {
+  background: #111;
+  border-color: #111;
+  color: white;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-export {
+  padding: 0.45rem 1.2rem;
+  background: linear-gradient(135deg, #111, #444);
+  border: none;
+  border-radius: 20px;
+  color: white;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.03em;
+}
+
+.btn-export:hover { opacity: 0.85; transform: scale(1.02); }
+.btn-export:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* ── Left Dock ── */
+.dock {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+  gap: 0.5rem;
+}
+
+.dock-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.dock-btn:hover {
+  background: var(--glass);
+  color: var(--text-primary);
+  border-color: var(--glass-border);
+}
+
+.dock-btn.active {
+  background: #111;
+  border-color: #111;
+  color: white;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+
+.dock-tip {
+  position: absolute;
+  left: 56px;
+  background: rgba(10,10,26,0.95);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-family: 'JetBrains Mono', monospace;
+  z-index: 100;
+}
+
+.dock-btn:hover .dock-tip { opacity: 1; }
+
+.dock-divider {
+  width: 28px;
+  height: 1px;
+  background: var(--glass-border);
+  margin: 0.3rem 0;
+}
+
+/* ── Canvas Area ── */
+.canvas-area {
+  position: relative;
+  overflow: hidden;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(0,0,0,0.02) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0,0,0,0.02) 0%, transparent 50%),
+    #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Grid overlay */
+.canvas-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.upload-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+  padding: 3rem;
+}
+
+.upload-ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: var(--glass);
+}
+
+.upload-ring::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px dashed rgba(0,0,0,0.25);
+  animation: spin-slow 8s linear infinite;
+}
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+
+.upload-ring:hover {
+  border-color: #111;
+  background: rgba(0,0,0,0.06);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  transform: scale(1.05);
+}
+
+.upload-prompt h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.upload-prompt p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.upload-types {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.upload-type-tag {
+  padding: 0.25rem 0.7rem;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+#mainCanvas {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius);
+  box-shadow: 0 0 60px rgba(0,0,0,0.5), 0 0 0 1px var(--glass-border);
+  display: none;
+  position: relative;
+  z-index: 2;
+}
+
+#mainVideo {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius);
+  box-shadow: 0 0 60px rgba(0,0,0,0.5), 0 0 0 1px var(--glass-border);
+  display: none;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Right Panel ── */
+.right-panel {
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid var(--glass-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border) transparent;
+}
+
+.tool-panel {
+  display: none;
+  padding: 1.25rem;
+  animation: fadeSlide 0.25s ease;
+}
+
+.tool-panel.active { display: block; }
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.panel-heading {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* Glass card */
+.glass-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s;
+}
+
+.glass-card:hover { background: var(--glass-hover); }
+
+.card-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Sliders */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.slider-label {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  width: 55px;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.slider-val {
+  font-size: 0.68rem;
+  color: #111;
+  width: 28px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 3px;
+  background: var(--glass-border);
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 6px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+/* Toggle grid */
+.toggle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.toggle-btn {
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Outfit', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.toggle-btn:hover { background: var(--glass-hover); color: var(--text-primary); }
+.toggle-btn.active {
+  background: #111;
+  border-color: #111;
+  color: white;
+}
+
+/* Action button */
+.action-btn {
+  width: 100%;
+  padding: 0.7rem;
+  border-radius: 10px;
+  border: none;
+  background: #111;
+  color: white;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.action-btn:hover { opacity: 0.85; transform: scale(1.01); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.action-btn.secondary {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+.action-btn.secondary:hover { background: var(--glass-hover); color: var(--text-primary); }
+
+/* Filter chips */
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.filter-chip {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1.5px solid var(--glass-border);
+  background: var(--glass);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.2s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+
+.filter-chip:hover { border-color: #111; transform: scale(1.03); }
+.filter-chip.active { border-color: #111; box-shadow: 0 0 10px rgba(0,0,0,0.15); }
+
+.filter-chip canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.filter-chip-label {
+  font-size: 0.55rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  position: relative;
+  z-index: 2;
+  letter-spacing: 0.03em;
+}
+
+/* Puzzle grid controls */
+.puzzle-style-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.puzzle-style-btn {
+  padding: 0.55rem 0.3rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.puzzle-style-btn:hover { border-color: #111; color: var(--text-primary); }
+.puzzle-style-btn.active { border-color: #111; background: rgba(0,0,0,0.08); color: #111; }
+
+/* Progress bar */
+.progress-wrap {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  display: none;
+}
+
+.progress-track {
+  height: 3px;
+  background: var(--glass-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #111, #555);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.progress-text {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Result grid at bottom of canvas */
+.fragment-results {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  display: none;
+  gap: 3px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px);
+  border-radius: var(--radius);
+  border: 1px solid var(--glass-border);
+  padding: 0.75rem;
+  z-index: 10;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.fragment-results canvas {
+  height: 70px;
+  width: auto;
+  border-radius: 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s;
+  border: 1px solid var(--glass-border);
+}
+.fragment-results canvas:hover { transform: scale(1.1); }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: rgba(10,10,10,0.92);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.6rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+input[type=file] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">DESIGN DEX</div>
+    <div class="header-center">
+      <button class="header-pill active" data-tool="fragment">⬡ Fragment</button>
+      <button class="header-pill" data-tool="filters">◈ Filters</button>
+      <button class="header-pill" data-tool="adjust">◎ Adjust</button>
+      <button class="header-pill" data-tool="background">✦ Background</button>
+    </div>
+    <div class="header-right">
+      <button class="btn-export" id="exportBtn" disabled>↓ Export</button>
+    </div>
+  </header>
+
+  <!-- Left Dock -->
+  <aside class="dock">
+    <button class="dock-btn" id="uploadDockBtn" title="Upload">
+      <span>⬆</span>
+      <span class="dock-tip">Upload</span>
+    </button>
+    <button class="dock-btn" id="undoBtn" title="Undo">
+      <span>↩</span>
+      <span class="dock-tip">Reset</span>
+    </button>
+    <div class="dock-divider"></div>
+    <button class="dock-btn active" data-tool="fragment">
+      <span>⬡</span>
+      <span class="dock-tip">Fragment</span>
+    </button>
+    <button class="dock-btn" data-tool="filters">
+      <span>◈</span>
+      <span class="dock-tip">Filters</span>
+    </button>
+    <button class="dock-btn" data-tool="adjust">
+      <span>◎</span>
+      <span class="dock-tip">Adjust</span>
+    </button>
+    <button class="dock-btn" data-tool="background">
+      <span>✦</span>
+      <span class="dock-tip">Background</span>
+    </button>
+  </aside>
+
+  <!-- Canvas -->
+  <section class="canvas-area" id="canvasArea">
+    <div class="upload-prompt" id="uploadPrompt">
+      <div class="upload-ring" id="uploadRing">📁</div>
+      <h2>Drop media here</h2>
+      <p>or click the ring to browse</p>
+      <div class="upload-types">
+        <span class="upload-type-tag">.jpg</span>
+        <span class="upload-type-tag">.png</span>
+        <span class="upload-type-tag">.webp</span>
+        <span class="upload-type-tag">.mp4</span>
+        <span class="upload-type-tag">.webm</span>
+      </div>
+    </div>
+    <canvas id="mainCanvas"></canvas>
+    <video id="mainVideo" controls loop></video>
+    <div class="fragment-results" id="fragmentResults"></div>
+  </section>
+
+  <!-- Right Panel -->
+  <aside class="right-panel">
+
+    <!-- Fragment Panel -->
+    <div class="tool-panel active" id="panel-fragment">
+      <div class="panel-heading">// Puzzle Fragment</div>
+
+      <div class="glass-card">
+        <div class="card-title">⬡ Grid Size</div>
+        <div class="slider-row">
+          <span class="slider-label">Columns</span>
+          <input type="range" id="gridCols" min="2" max="10" value="4">
+          <span class="slider-val" id="gridColsVal">4</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Rows</span>
+          <input type="range" id="gridRows" min="2" max="10" value="4">
+          <span class="slider-val" id="gridRowsVal">4</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Tab Size</span>
+          <input type="range" id="tabSz" min="6" max="32" value="16">
+          <span class="slider-val" id="tabSzVal">16</span>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title">◩ Piece Style</div>
+        <div class="puzzle-style-grid">
+          <button class="puzzle-style-btn active" data-pstyle="classic">Classic</button>
+          <button class="puzzle-style-btn" data-pstyle="wavy">Wavy</button>
+          <button class="puzzle-style-btn" data-pstyle="sharp">Sharp</button>
+          <button class="puzzle-style-btn" data-pstyle="round">Round</button>
+          <button class="puzzle-style-btn" data-pstyle="diamond">Diamond</button>
+          <button class="puzzle-style-btn" data-pstyle="random">Random</button>
+        </div>
+      </div>
+
+      <div class="progress-wrap" id="fragProgress">
+        <div class="progress-track"><div class="progress-fill" id="fragProgressFill"></div></div>
+        <div class="progress-text" id="fragProgressText">Fragmenting...</div>
+      </div>
+
+      <button class="action-btn" id="fragmentBtn" disabled>⬡ Fragment Image</button>
+      <button class="action-btn secondary" id="downloadFragBtn" disabled>↓ Download All (.zip)</button>
+    </div>
+
+    <!-- Filters Panel -->
+    <div class="tool-panel" id="panel-filters">
+      <div class="panel-heading">// Filters</div>
+
+      <div class="glass-card">
+        <div class="card-title">⬛ Bitmap Effects</div>
+        <div class="filter-grid" id="filterGridBitmap"><!-- populated by JS --></div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title">◈ Colour Effects</div>
+        <div class="filter-grid" id="filterGridColor"><!-- populated by JS --></div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title">◎ Texture Effects</div>
+        <div class="filter-grid" id="filterGridTexture"><!-- populated by JS --></div>
+      </div>
+
+      <!-- Bitmap threshold slider (shows when bitmap selected) -->
+      <div class="glass-card" id="bitmapControls" style="display:none;">
+        <div class="card-title">⬛ Bitmap Threshold</div>
+        <div class="slider-row">
+          <span class="slider-label">Threshold</span>
+          <input type="range" id="bitmapThreshold" min="0" max="255" value="128">
+          <span class="slider-val" id="bitmapThresholdVal">128</span>
+        </div>
+      </div>
+
+      <!-- Edge detection mode (shows when edge selected) -->
+      <div class="glass-card" id="edgeControls" style="display:none;">
+        <div class="card-title">◈ Edge Strength</div>
+        <div class="slider-row">
+          <span class="slider-label">Strength</span>
+          <input type="range" id="edgeStrength" min="1" max="10" value="3">
+          <span class="slider-val" id="edgeStrengthVal">3</span>
+        </div>
+      </div>
+
+      <!-- Pixelate control -->
+      <div class="glass-card" id="pixelateControls" style="display:none;">
+        <div class="card-title">▦ Pixel Size</div>
+        <div class="slider-row">
+          <span class="slider-label">Size</span>
+          <input type="range" id="pixelateSize" min="2" max="40" value="8">
+          <span class="slider-val" id="pixelateSizeVal">8</span>
+        </div>
+      </div>
+
+      <!-- Noise control -->
+      <div class="glass-card" id="noiseControls" style="display:none;">
+        <div class="card-title">⁘ Noise Amount</div>
+        <div class="slider-row">
+          <span class="slider-label">Amount</span>
+          <input type="range" id="noiseAmount" min="0" max="150" value="40">
+          <span class="slider-val" id="noiseAmountVal">40</span>
+        </div>
+      </div>
+
+      <button class="action-btn" id="applyFilterBtn" disabled>Apply Filter</button>
+      <button class="action-btn secondary" id="resetFilterBtn">Reset</button>
+    </div>
+
+    <!-- Adjust Panel -->
+    <div class="tool-panel" id="panel-adjust">
+      <div class="panel-heading">// Adjustments</div>
+      <div class="glass-card">
+        <div class="card-title">☀ Light</div>
+        <div class="slider-row"><span class="slider-label">Brightness</span><input type="range" class="adj-slider" data-prop="brightness" min="0" max="200" value="100"><span class="slider-val adj-val">100</span></div>
+        <div class="slider-row"><span class="slider-label">Contrast</span><input type="range" class="adj-slider" data-prop="contrast" min="0" max="200" value="100"><span class="slider-val adj-val">100</span></div>
+        <div class="slider-row"><span class="slider-label">Exposure</span><input type="range" class="adj-slider" data-prop="exposure" min="-100" max="100" value="0"><span class="slider-val adj-val">0</span></div>
+      </div>
+      <div class="glass-card">
+        <div class="card-title">🎨 Color</div>
+        <div class="slider-row"><span class="slider-label">Saturation</span><input type="range" class="adj-slider" data-prop="saturate" min="0" max="300" value="100"><span class="slider-val adj-val">100</span></div>
+        <div class="slider-row"><span class="slider-label">Hue</span><input type="range" class="adj-slider" data-prop="hue" min="-180" max="180" value="0"><span class="slider-val adj-val">0</span></div>
+        <div class="slider-row"><span class="slider-label">Temperature</span><input type="range" class="adj-slider" data-prop="temperature" min="-100" max="100" value="0"><span class="slider-val adj-val">0</span></div>
+      </div>
+      <div class="glass-card">
+        <div class="card-title">◎ Details</div>
+        <div class="slider-row"><span class="slider-label">Blur</span><input type="range" class="adj-slider" data-prop="blur" min="0" max="20" value="0"><span class="slider-val adj-val">0</span></div>
+        <div class="slider-row"><span class="slider-label">Sharpen</span><input type="range" class="adj-slider" data-prop="sharpen" min="0" max="10" value="0"><span class="slider-val adj-val">0</span></div>
+        <div class="slider-row"><span class="slider-label">Vignette</span><input type="range" class="adj-slider" data-prop="vignette" min="0" max="100" value="0"><span class="slider-val adj-val">0</span></div>
+      </div>
+      <button class="action-btn" id="applyAdjBtn" disabled>Apply Adjustments</button>
+      <button class="action-btn secondary" id="resetAdjBtn">Reset All</button>
+    </div>
+
+    <!-- Background Panel -->
+    <div class="tool-panel" id="panel-background">
+      <div class="panel-heading">// Background</div>
+      <div class="glass-card">
+        <div class="card-title">✦ BG Type</div>
+        <div class="toggle-grid">
+          <button class="toggle-btn active" data-bg="color">🎨 Color</button>
+          <button class="toggle-btn" data-bg="gradient">◑ Gradient</button>
+          <button class="toggle-btn" data-bg="image">🖼 Image</button>
+          <button class="toggle-btn" data-bg="video">🎬 Video</button>
+        </div>
+      </div>
+
+      <div class="glass-card" id="bgColorCard">
+        <div class="card-title">Color Fill</div>
+        <input type="color" id="bgColorPicker" value="#0a0a1a" style="width:100%;height:36px;border:none;border-radius:8px;cursor:pointer;background:none;">
+      </div>
+
+      <div class="glass-card hidden" id="bgGradCard">
+        <div class="card-title">Gradient</div>
+        <div class="slider-row"><span class="slider-label">Angle</span><input type="range" id="gradAngle" min="0" max="360" value="135"><span class="slider-val" id="gradAngleVal">135°</span></div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+          <input type="color" id="gradColor1" value="#3b82f6" style="flex:1;height:32px;border:none;border-radius:6px;cursor:pointer;">
+          <input type="color" id="gradColor2" value="#8b5cf6" style="flex:1;height:32px;border:none;border-radius:6px;cursor:pointer;">
+        </div>
+      </div>
+
+      <div class="glass-card hidden" id="bgImageCard">
+        <div class="card-title">Image Background</div>
+        <button class="action-btn secondary" id="uploadBgImageBtn">⬆ Upload Image</button>
+        <input type="file" id="bgImageFile" accept="image/*">
+      </div>
+
+      <div class="glass-card hidden" id="bgVideoCard">
+        <div class="card-title">Video Background</div>
+        <button class="action-btn secondary" id="uploadBgVideoBtn">⬆ Upload Video</button>
+        <input type="file" id="bgVideoFile" accept="video/*">
+      </div>
+
+      <button class="action-btn" id="applyBgBtn" disabled>Apply Background</button>
+    </div>
+
+  </aside>
+</div>
+
+<!-- Hidden inputs -->
+<input type="file" id="mainFileInput" accept="image/*,video/*">
+
+<div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let sourceImage = null;       // original Image object
+let sourceIsVideo = false;
+let activeFilter = null;
+let activeFilterGroup = null;
+let puzzleStyle = 'classic';
+let fragmentCanvases = [];
+let bgType = 'color';
+let bgImageEl = null;
+let bgVideoEl = null;
+
+const adjValues = {
+  brightness: 100, contrast: 100, exposure: 0,
+  saturate: 100, hue: 0, temperature: 0,
+  blur: 0, sharpen: 0, vignette: 0
+};
+
+// ─── File Inputs ─────────────────────────────────────────────────────────────
+const mainFileInput = document.getElementById('mainFileInput');
+document.getElementById('uploadRing').addEventListener('click', () => mainFileInput.click());
+document.getElementById('uploadDockBtn').addEventListener('click', () => mainFileInput.click());
+
+mainFileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+const canvasArea = document.getElementById('canvasArea');
+canvasArea.addEventListener('dragover', e => { e.preventDefault(); canvasArea.style.outline = '2px dashed var(--accent-blue)'; });
+canvasArea.addEventListener('dragleave', () => { canvasArea.style.outline = ''; });
+canvasArea.addEventListener('drop', e => {
+  e.preventDefault();
+  canvasArea.style.outline = '';
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+function handleFile(file) {
+  if (!file) return;
+  const isVideo = file.type.startsWith('video/');
+  sourceIsVideo = isVideo;
+
+  if (isVideo) {
+    const url = URL.createObjectURL(file);
+    const vid = document.getElementById('mainVideo');
+    vid.src = url;
+    vid.style.display = 'block';
+    document.getElementById('mainCanvas').style.display = 'none';
+    document.getElementById('uploadPrompt').style.display = 'none';
+    document.getElementById('exportBtn').disabled = false;
+    document.getElementById('applyBgBtn').disabled = false;
+    toast('✓ Video loaded — use Adjust or Background tools');
+  } else {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      renderToCanvas(img);
+      document.getElementById('mainVideo').style.display = 'none';
+      document.getElementById('uploadPrompt').style.display = 'none';
+      document.getElementById('exportBtn').disabled = false;
+      document.getElementById('fragmentBtn').disabled = false;
+      document.getElementById('applyFilterBtn').disabled = false;
+      document.getElementById('applyAdjBtn').disabled = false;
+      document.getElementById('applyBgBtn').disabled = false;
+      buildFilterPreviews(img);
+      toast(`✓ Loaded ${img.width}×${img.height}px`);
+    };
+    img.src = URL.createObjectURL(file);
+  }
+}
+
+function renderToCanvas(img) {
+  const c = document.getElementById('mainCanvas');
+  const maxW = canvasArea.clientWidth - 80;
+  const maxH = canvasArea.clientHeight - 80;
+  const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  c.style.display = 'block';
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+document.getElementById('undoBtn').addEventListener('click', () => {
+  if (sourceImage) {
+    renderToCanvas(sourceImage);
+    resetAdj();
+    currentFilter = 'none';
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    fragmentCanvases = [];
+    document.getElementById('fragmentResults').style.display = 'none';
+    document.getElementById('downloadFragBtn').disabled = true;
+    toast('Reset to original');
+  }
+});
+
+// ─── Tool Switching ───────────────────────────────────────────────────────────
+function setActiveTool(tool) {
+  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.dock-btn[data-tool]').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.header-pill').forEach(b => b.classList.remove('active'));
+  document.getElementById(`panel-${tool}`).classList.add('active');
+  document.querySelector(`.dock-btn[data-tool="${tool}"]`)?.classList.add('active');
+  document.querySelector(`.header-pill[data-tool="${tool}"]`)?.classList.add('active');
+}
+
+document.querySelectorAll('[data-tool]').forEach(el => {
+  el.addEventListener('click', () => setActiveTool(el.dataset.tool));
+});
+
+// ─── Fragment Tool ────────────────────────────────────────────────────────────
+const gridColsSlider = document.getElementById('gridCols');
+const gridRowsSlider = document.getElementById('gridRows');
+const tabSzSlider = document.getElementById('tabSz');
+
+[gridColsSlider, gridRowsSlider, tabSzSlider].forEach(s => {
+  s.addEventListener('input', () => {
+    document.getElementById('gridColsVal').textContent = gridColsSlider.value;
+    document.getElementById('gridRowsVal').textContent = gridRowsSlider.value;
+    document.getElementById('tabSzVal').textContent = tabSzSlider.value;
+  });
+});
+
+document.querySelectorAll('.puzzle-style-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.puzzle-style-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    puzzleStyle = btn.dataset.pstyle;
+  });
+});
+
+document.getElementById('fragmentBtn').addEventListener('click', fragmentImage);
+
+async function fragmentImage() {
+  if (!sourceImage) return;
+  const btn = document.getElementById('fragmentBtn');
+  btn.innerHTML = '<span class="spinner"></span> Fragmenting...';
+  btn.disabled = true;
+
+  const progress = document.getElementById('fragProgress');
+  const fill = document.getElementById('fragProgressFill');
+  const txt = document.getElementById('fragProgressText');
+  progress.style.display = 'block';
+
+  await new Promise(r => setTimeout(r, 30));
+
+  const cols = parseInt(gridColsSlider.value);
+  const rows = parseInt(gridRowsSlider.value);
+  const tab = parseInt(tabSzSlider.value);
+  const img = sourceImage;
+  const pw = Math.floor(img.width / cols);
+  const ph = Math.floor(img.height / rows);
+  const total = cols * rows;
+
+  // Tab directions
+  const hTabs = Array.from({length: rows - 1}, () => Array.from({length: cols}, () => Math.random() < 0.5 ? 1 : -1));
+  const vTabs = Array.from({length: rows}, () => Array.from({length: cols - 1}, () => Math.random() < 0.5 ? 1 : -1));
+
+  fragmentCanvases = [];
+  const results = document.getElementById('fragmentResults');
+  results.innerHTML = '';
+  results.style.display = 'flex';
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = r * cols + c;
+      fill.style.width = `${(idx / total * 100).toFixed(0)}%`;
+      txt.textContent = `Piece ${idx + 1} / ${total}`;
+
+      const topTab    = r === 0 ? 0 : -hTabs[r-1][c];
+      const bottomTab = r === rows-1 ? 0 : hTabs[r][c];
+      const leftTab   = c === 0 ? 0 : -vTabs[r][c-1];
+      const rightTab  = c === cols-1 ? 0 : vTabs[r][c];
+
+      const actualStyle = puzzleStyle === 'random'
+        ? ['classic','wavy','sharp','round','diamond'][Math.floor(Math.random()*5)]
+        : puzzleStyle;
+
+      const pc = drawPuzzlePiece(img, r, c, pw, ph, tab, topTab, rightTab, bottomTab, leftTab, actualStyle);
+      fragmentCanvases.push({ canvas: pc, row: r, col: c });
+
+      const thumb = document.createElement('canvas');
+      const scale = 70 / pc.height;
+      thumb.height = 70;
+      thumb.width = Math.round(pc.width * scale);
+      thumb.getContext('2d').drawImage(pc, 0, 0, thumb.width, thumb.height);
+      thumb.title = `Piece ${r+1},${c+1} — Click to download`;
+      thumb.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.download = `piece_${r+1}_${c+1}.png`;
+        a.href = pc.toDataURL('image/png');
+        a.click();
+      });
+      results.appendChild(thumb);
+
+      if (idx % 4 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  fill.style.width = '100%';
+  txt.textContent = `✓ ${total} pieces ready`;
+  btn.innerHTML = '⬡ Re-Fragment';
+  btn.disabled = false;
+  document.getElementById('downloadFragBtn').disabled = false;
+  toast(`✓ ${total} puzzle pieces created`);
+}
+
+function drawPuzzlePiece(img, row, col, pw, ph, tab, topTab, rightTab, bottomTab, leftTab, style) {
+  const pad = tab + 4;
+  const c = document.createElement('canvas');
+  c.width = pw + pad * 2;
+  c.height = ph + pad * 2;
+  const ctx = c.getContext('2d');
+  ctx.save();
+  tracePiece(ctx, pad, pad, pw, ph, tab, topTab, rightTab, bottomTab, leftTab, style);
+  ctx.clip();
+  ctx.drawImage(img, col * pw, row * ph, pw, ph, pad, pad, pw, ph);
+  ctx.restore();
+  ctx.save();
+  tracePiece(ctx, pad, pad, pw, ph, tab, topTab, rightTab, bottomTab, leftTab, style);
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+  return c;
+}
+
+function tracePiece(ctx, x, y, w, h, tab, topT, rightT, bottomT, leftT, style) {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  drawEdge(ctx, x, y, x+w, y, tab, topT, 'h', style);
+  drawEdge(ctx, x+w, y, x+w, y+h, tab, rightT, 'v', style);
+  drawEdge(ctx, x+w, y+h, x, y+h, tab, -bottomT, 'h', style);
+  drawEdge(ctx, x, y+h, x, y, tab, -leftT, 'v', style);
+  ctx.closePath();
+}
+
+function drawEdge(ctx, x1, y1, x2, y2, tab, dir, axis, style) {
+  if (dir === 0) { ctx.lineTo(x2, y2); return; }
+  const mx = (x1+x2)/2, my = (y1+y2)/2;
+  const len = Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+  const px = axis==='h' ? 0 : 1, py = axis==='h' ? 1 : 0;
+  const s = dir;
+
+  if (style === 'classic' || style === 'round') {
+    const base = len * 0.2;
+    ctx.lineTo(mx-(axis==='h'?base:0), my-(axis==='v'?base:0));
+    const cp = style === 'round' ? tab * 1.2 : tab;
+    ctx.bezierCurveTo(
+      mx-(axis==='h'?base:0)+px*s*cp*0.5, my-(axis==='v'?base:0)+py*s*cp*0.5,
+      mx+px*s*cp, my+py*s*cp, mx+px*s*cp, my+py*s*cp
+    );
+    ctx.bezierCurveTo(
+      mx+px*s*cp, my+py*s*cp,
+      mx+(axis==='h'?base:0)+px*s*cp*0.5, my+(axis==='v'?base:0)+py*s*cp*0.5,
+      mx+(axis==='h'?base:0), my+(axis==='v'?base:0)
+    );
+    ctx.lineTo(x2, y2);
+  } else if (style === 'wavy') {
+    const steps = 24;
+    for (let i = 0; i <= steps; i++) {
+      const t = i/steps;
+      const lx = x1+(x2-x1)*t, ly = y1+(y2-y1)*t;
+      const wave = Math.sin(t*Math.PI*4)*s*tab*0.45;
+      ctx.lineTo(lx+px*wave, ly+py*wave);
+    }
+  } else if (style === 'sharp') {
+    const base = len*0.18;
+    ctx.lineTo(mx-(axis==='h'?base:0), my-(axis==='v'?base:0));
+    ctx.lineTo(mx+px*s*tab, my+py*s*tab);
+    ctx.lineTo(mx+(axis==='h'?base:0), my+(axis==='v'?base:0));
+    ctx.lineTo(x2, y2);
+  } else if (style === 'diamond') {
+    const base = len*0.15;
+    ctx.lineTo(mx-(axis==='h'?base:0), my-(axis==='v'?base:0));
+    ctx.lineTo(mx+px*s*tab*0.6, my+py*s*tab*0.6);
+    ctx.lineTo(mx, my);
+    ctx.lineTo(mx+px*s*tab*0.6, my+py*s*tab*0.6);
+    ctx.lineTo(mx+(axis==='h'?base:0), my+(axis==='v'?base:0));
+    ctx.lineTo(x2, y2);
+  }
+}
+
+document.getElementById('downloadFragBtn').addEventListener('click', async () => {
+  if (!fragmentCanvases.length) return;
+  const btn = document.getElementById('downloadFragBtn');
+  btn.innerHTML = '<span class="spinner"></span> Packing...';
+  btn.disabled = true;
+  const zip = new JSZip();
+  const folder = zip.folder('prism_fragments');
+  for (const { canvas, row, col } of fragmentCanvases) {
+    const b64 = canvas.toDataURL('image/png').split(',')[1];
+    folder.file(`piece_${row+1}_${col+1}.png`, b64, { base64: true });
+  }
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'prism_fragments.zip';
+  a.click();
+  btn.innerHTML = '↓ Download All (.zip)';
+  btn.disabled = false;
+  toast(`✓ Downloaded ${fragmentCanvases.length} pieces`);
+});
+
+// ─── Filters (TUI-inspired) ───────────────────────────────────────────────────
+// Filter definitions — grouped like tui.image-editor
+const BITMAP_FILTERS = [
+  {
+    name: 'Grayscale',
+    icon: '▩',
+    fn: (ctx) => applyPixel(ctx, px => {
+      const g = Math.round(px[0]*0.299 + px[1]*0.587 + px[2]*0.114);
+      return [g, g, g, px[3]];
+    })
+  },
+  {
+    name: 'Invert',
+    icon: '◑',
+    fn: (ctx) => applyPixel(ctx, px => [255-px[0], 255-px[1], 255-px[2], px[3]])
+  },
+  {
+    name: 'Bitmap',
+    icon: '⬛',
+    fn: (ctx, opts={}) => {
+      const threshold = opts.threshold ?? 128;
+      applyPixel(ctx, px => {
+        const g = Math.round(px[0]*0.299 + px[1]*0.587 + px[2]*0.114);
+        const v = g >= threshold ? 255 : 0;
+        return [v, v, v, px[3]];
+      });
+    }
+  },
+  {
+    name: 'Edge',
+    icon: '◈',
+    fn: (ctx, opts={}) => {
+      const strength = opts.strength ?? 3;
+      const c = ctx.canvas;
+      const src = ctx.getImageData(0, 0, c.width, c.height);
+      const dst = ctx.createImageData(c.width, c.height);
+      const sd = src.data, dd = dst.data;
+      const w = c.width, h = c.height;
+
+      // Sobel edge detection
+      for (let y = 1; y < h-1; y++) {
+        for (let x = 1; x < w-1; x++) {
+          const idx = (y*w + x) * 4;
+          // Sample 3x3 grayscale
+          const get = (ox, oy) => {
+            const i = ((y+oy)*w + (x+ox)) * 4;
+            return sd[i]*0.299 + sd[i+1]*0.587 + sd[i+2]*0.114;
+          };
+          const gx = -get(-1,-1) + get(1,-1) - 2*get(-1,0) + 2*get(1,0) - get(-1,1) + get(1,1);
+          const gy = -get(-1,-1) - 2*get(0,-1) - get(1,-1) + get(-1,1) + 2*get(0,1) + get(1,1);
+          const mag = Math.min(255, Math.sqrt(gx*gx + gy*gy) * strength);
+          dd[idx] = dd[idx+1] = dd[idx+2] = mag;
+          dd[idx+3] = 255;
+        }
+      }
+      ctx.putImageData(dst, 0, 0);
+    }
+  },
+];
+
+const COLOR_FILTERS = [
+  {
+    name: 'Sepia',
+    icon: '◧',
+    fn: (ctx) => applyPixel(ctx, px => [
+      Math.min(255, px[0]*0.393 + px[1]*0.769 + px[2]*0.189),
+      Math.min(255, px[0]*0.349 + px[1]*0.686 + px[2]*0.168),
+      Math.min(255, px[0]*0.272 + px[1]*0.534 + px[2]*0.131),
+      px[3]
+    ])
+  },
+  {
+    name: 'Warm',
+    icon: '◕',
+    fn: (ctx) => applyPixel(ctx, px => [Math.min(255,px[0]+30), px[1], Math.max(0,px[2]-25), px[3]])
+  },
+  {
+    name: 'Cool',
+    icon: '◔',
+    fn: (ctx) => applyPixel(ctx, px => [Math.max(0,px[0]-20), px[1], Math.min(255,px[2]+35), px[3]])
+  },
+  {
+    name: 'Vivid',
+    icon: '◉',
+    fn: (ctx) => applyPixel(ctx, px => {
+      const avg = (px[0]+px[1]+px[2])/3;
+      return [
+        Math.min(255, avg + (px[0]-avg)*1.6),
+        Math.min(255, avg + (px[1]-avg)*1.6),
+        Math.min(255, avg + (px[2]-avg)*1.6),
+        px[3]
+      ];
+    })
+  },
+  {
+    name: 'Fade',
+    icon: '◌',
+    fn: (ctx) => applyPixel(ctx, px => [px[0]*0.78+50, px[1]*0.78+50, px[2]*0.78+50, px[3]])
+  },
+  {
+    name: 'Tint',
+    icon: '◍',
+    fn: (ctx) => applyPixel(ctx, px => {
+      const g = px[0]*0.299 + px[1]*0.587 + px[2]*0.114;
+      return [Math.min(255, g*0.8 + 60), Math.min(255, g*0.9), Math.min(255, g*1.1 + 20), px[3]];
+    })
+  },
+];
+
+const TEXTURE_FILTERS = [
+  {
+    name: 'Emboss',
+    icon: '▣',
+    fn: (ctx) => {
+      const c = ctx.canvas;
+      const src = ctx.getImageData(0, 0, c.width, c.height);
+      const dst = ctx.createImageData(c.width, c.height);
+      const sd = src.data, dd = dst.data;
+      const w = c.width;
+      // Emboss kernel: [-2,-1,0],[-1,1,1],[0,1,2]
+      for (let y = 1; y < c.height-1; y++) {
+        for (let x = 1; x < w-1; x++) {
+          const idx = (y*w+x)*4;
+          for (let ch = 0; ch < 3; ch++) {
+            const val = 128
+              - 2*sd[((y-1)*w+(x-1))*4+ch]
+              -   sd[((y-1)*w+ x   )*4+ch]
+              -   sd[( y   *w+(x-1))*4+ch]
+              +   sd[( y   *w+ x   )*4+ch]
+              +   sd[( y   *w+(x+1))*4+ch]
+              +   sd[((y+1)*w+ x   )*4+ch]
+              + 2*sd[((y+1)*w+(x+1))*4+ch];
+            dd[idx+ch] = Math.min(255, Math.max(0, val));
+          }
+          dd[idx+3] = 255;
+        }
+      }
+      ctx.putImageData(dst, 0, 0);
+    }
+  },
+  {
+    name: 'Pixelate',
+    icon: '▦',
+    fn: (ctx, opts={}) => {
+      const size = opts.pixelSize ?? 8;
+      const c = ctx.canvas;
+      const id = ctx.getImageData(0, 0, c.width, c.height);
+      const d = id.data;
+      for (let y = 0; y < c.height; y += size) {
+        for (let x = 0; x < c.width; x += size) {
+          const idx = (y*c.width + x)*4;
+          const r = d[idx], g = d[idx+1], b = d[idx+2];
+          for (let dy = 0; dy < size && y+dy < c.height; dy++) {
+            for (let dx = 0; dx < size && x+dx < c.width; dx++) {
+              const i = ((y+dy)*c.width + (x+dx))*4;
+              d[i]=r; d[i+1]=g; d[i+2]=b;
+            }
+          }
+        }
+      }
+      ctx.putImageData(id, 0, 0);
+    }
+  },
+  {
+    name: 'Noise',
+    icon: '⁘',
+    fn: (ctx, opts={}) => {
+      const amount = opts.noiseAmount ?? 40;
+      applyPixel(ctx, px => {
+        const n = (Math.random()-0.5) * amount * 2;
+        return [
+          Math.min(255, Math.max(0, px[0]+n)),
+          Math.min(255, Math.max(0, px[1]+n)),
+          Math.min(255, Math.max(0, px[2]+n)),
+          px[3]
+        ];
+      });
+    }
+  },
+  {
+    name: 'Sharpen',
+    icon: '◆',
+    fn: (ctx) => {
+      const c = ctx.canvas;
+      const src = ctx.getImageData(0, 0, c.width, c.height);
+      const dst = ctx.createImageData(c.width, c.height);
+      const sd = src.data, dd = dst.data;
+      const w = c.width;
+      const kernel = [0,-1,0,-1,5,-1,0,-1,0];
+      for (let y = 1; y < c.height-1; y++) {
+        for (let x = 1; x < w-1; x++) {
+          const idx = (y*w+x)*4;
+          for (let ch = 0; ch < 3; ch++) {
+            const v =
+               kernel[0]*sd[((y-1)*w+(x-1))*4+ch] + kernel[1]*sd[((y-1)*w+x)*4+ch] + kernel[2]*sd[((y-1)*w+(x+1))*4+ch]
+              +kernel[3]*sd[(y*w+(x-1))*4+ch]      + kernel[4]*sd[(y*w+x)*4+ch]      + kernel[5]*sd[(y*w+(x+1))*4+ch]
+              +kernel[6]*sd[((y+1)*w+(x-1))*4+ch] + kernel[7]*sd[((y+1)*w+x)*4+ch] + kernel[8]*sd[((y+1)*w+(x+1))*4+ch];
+            dd[idx+ch] = Math.min(255, Math.max(0, v));
+          }
+          dd[idx+3] = 255;
+        }
+      }
+      ctx.putImageData(dst, 0, 0);
+    }
+  },
+];
+
+let activeFilter = null;
+let activeFilterGroup = null;
+
+function applyPixel(ctx, fn) {
+  const c = ctx.canvas;
+  const id = ctx.getImageData(0, 0, c.width, c.height);
+  const d = id.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const res = fn([d[i], d[i+1], d[i+2], d[i+3]]);
+    d[i]=Math.round(res[0]); d[i+1]=Math.round(res[1]); d[i+2]=Math.round(res[2]); d[i+3]=res[3];
+  }
+  ctx.putImageData(id, 0, 0);
+}
+
+function buildFilterGroup(filters, containerId, group) {
+  const grid = document.getElementById(containerId);
+  grid.innerHTML = '';
+  filters.forEach((f, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip';
+    chip.dataset.group = group;
+    chip.dataset.idx = i;
+
+    const fc = document.createElement('canvas');
+    fc.width = 60; fc.height = 60;
+    const fctx = fc.getContext('2d');
+
+    if (sourceImage) {
+      const scale = 60 / Math.max(sourceImage.width, sourceImage.height);
+      fc.width = Math.round(sourceImage.width * scale);
+      fc.height = Math.round(sourceImage.height * scale);
+      fctx.drawImage(sourceImage, 0, 0, fc.width, fc.height);
+      f.fn(fctx, { threshold: 128, strength: 3, pixelSize: 8, noiseAmount: 40 });
+    }
+
+    const lbl = document.createElement('span');
+    lbl.className = 'filter-chip-label';
+    lbl.textContent = f.name;
+
+    chip.appendChild(fc);
+    chip.appendChild(lbl);
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeFilter = f;
+      activeFilterGroup = group;
+      // Show/hide filter-specific controls
+      document.getElementById('bitmapControls').style.display = f.name === 'Bitmap' ? 'block' : 'none';
+      document.getElementById('edgeControls').style.display = f.name === 'Edge' ? 'block' : 'none';
+      document.getElementById('pixelateControls').style.display = f.name === 'Pixelate' ? 'block' : 'none';
+      document.getElementById('noiseControls').style.display = f.name === 'Noise' ? 'block' : 'none';
+    });
+    grid.appendChild(chip);
+  });
+}
+
+function buildFilterPreviews(img) {
+  buildFilterGroup(BITMAP_FILTERS, 'filterGridBitmap', 'bitmap');
+  buildFilterGroup(COLOR_FILTERS, 'filterGridColor', 'color');
+  buildFilterGroup(TEXTURE_FILTERS, 'filterGridTexture', 'texture');
+}
+
+// Slider live updates
+document.getElementById('bitmapThreshold').addEventListener('input', function() {
+  document.getElementById('bitmapThresholdVal').textContent = this.value;
+});
+document.getElementById('edgeStrength').addEventListener('input', function() {
+  document.getElementById('edgeStrengthVal').textContent = this.value;
+});
+document.getElementById('pixelateSize').addEventListener('input', function() {
+  document.getElementById('pixelateSizeVal').textContent = this.value;
+});
+document.getElementById('noiseAmount').addEventListener('input', function() {
+  document.getElementById('noiseAmountVal').textContent = this.value;
+});
+
+document.getElementById('applyFilterBtn').addEventListener('click', () => {
+  if (!sourceImage || !activeFilter) {
+    if (!activeFilter) { toast('Select a filter first'); return; }
+    return;
+  }
+  const c = document.getElementById('mainCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.drawImage(sourceImage, 0, 0, c.width, c.height);
+
+  const opts = {
+    threshold: parseInt(document.getElementById('bitmapThreshold').value),
+    strength: parseInt(document.getElementById('edgeStrength').value),
+    pixelSize: parseInt(document.getElementById('pixelateSize').value),
+    noiseAmount: parseInt(document.getElementById('noiseAmount').value),
+  };
+
+  activeFilter.fn(ctx, opts);
+  toast(`✓ ${activeFilter.name} applied`);
+});
+
+document.getElementById('resetFilterBtn').addEventListener('click', () => {
+  if (sourceImage) {
+    renderToCanvas(sourceImage);
+    activeFilter = null;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    ['bitmapControls','edgeControls','pixelateControls','noiseControls'].forEach(id => {
+      document.getElementById(id).style.display = 'none';
+    });
+    toast('Filter reset');
+  }
+});
+
+// ─── Adjustments ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.adj-slider').forEach(s => {
+  s.addEventListener('input', () => {
+    const val = s.nextElementSibling;
+    val.textContent = s.value;
+    adjValues[s.dataset.prop] = parseInt(s.value);
+  });
+});
+
+document.getElementById('applyAdjBtn').addEventListener('click', () => {
+  if (!sourceImage) return;
+  const c = document.getElementById('mainCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  // Build CSS filter string
+  let filterStr = `brightness(${adjValues.brightness}%) contrast(${adjValues.contrast}%) saturate(${adjValues.saturate}%) hue-rotate(${adjValues.hue}deg) blur(${adjValues.blur}px)`;
+  ctx.filter = filterStr;
+  ctx.drawImage(sourceImage, 0, 0, c.width, c.height);
+  ctx.filter = 'none';
+
+  // Exposure (simple brightness on pixels)
+  if (adjValues.exposure !== 0) {
+    const exp = adjValues.exposure * 1.2;
+    applyPixel(ctx, px => [
+      Math.min(255, Math.max(0, px[0] + exp)),
+      Math.min(255, Math.max(0, px[1] + exp)),
+      Math.min(255, Math.max(0, px[2] + exp)),
+      px[3]
+    ]);
+  }
+
+  // Temperature
+  if (adjValues.temperature !== 0) {
+    const t = adjValues.temperature;
+    applyPixel(ctx, px => [
+      Math.min(255, Math.max(0, px[0] + t * 0.8)),
+      px[1],
+      Math.min(255, Math.max(0, px[2] - t * 0.8)),
+      px[3]
+    ]);
+  }
+
+  // Vignette
+  if (adjValues.vignette > 0) {
+    const grad = ctx.createRadialGradient(c.width/2, c.height/2, c.width*0.3, c.width/2, c.height/2, c.width*0.8);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, `rgba(0,0,0,${adjValues.vignette/100})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, c.width, c.height);
+  }
+
+  toast('✓ Adjustments applied');
+});
+
+function resetAdj() {
+  Object.keys(adjValues).forEach(k => {
+    const defaults = { brightness:100,contrast:100,exposure:0,saturate:100,hue:0,temperature:0,blur:0,sharpen:0,vignette:0 };
+    adjValues[k] = defaults[k];
+  });
+  document.querySelectorAll('.adj-slider').forEach(s => {
+    const defaults = { brightness:100,contrast:100,exposure:0,saturate:100,hue:0,temperature:0,blur:0,sharpen:0,vignette:0 };
+    s.value = defaults[s.dataset.prop];
+    s.nextElementSibling.textContent = defaults[s.dataset.prop];
+  });
+}
+
+document.getElementById('resetAdjBtn').addEventListener('click', () => {
+  if (sourceImage) renderToCanvas(sourceImage);
+  resetAdj();
+  toast('Adjustments reset');
+});
+
+// ─── Background Tool ──────────────────────────────────────────────────────────
+document.querySelectorAll('[data-bg]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    bgType = btn.dataset.bg;
+    document.querySelectorAll('[data-bg]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['bgColorCard','bgGradCard','bgImageCard','bgVideoCard'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    const map = { color:'bgColorCard', gradient:'bgGradCard', image:'bgImageCard', video:'bgVideoCard' };
+    document.getElementById(map[bgType]).classList.remove('hidden');
+  });
+});
+
+document.getElementById('gradAngle').addEventListener('input', function() {
+  document.getElementById('gradAngleVal').textContent = this.value + '°';
+});
+
+document.getElementById('uploadBgImageBtn').addEventListener('click', () => document.getElementById('bgImageFile').click());
+document.getElementById('bgImageFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  bgImageEl = new Image();
+  bgImageEl.onload = () => toast('✓ Background image loaded');
+  bgImageEl.src = URL.createObjectURL(f);
+});
+
+document.getElementById('uploadBgVideoBtn').addEventListener('click', () => document.getElementById('bgVideoFile').click());
+document.getElementById('bgVideoFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  bgVideoEl = document.createElement('video');
+  bgVideoEl.loop = true;
+  bgVideoEl.muted = true;
+  bgVideoEl.autoplay = true;
+  bgVideoEl.src = URL.createObjectURL(f);
+  bgVideoEl.play();
+  toast('✓ Background video loaded');
+});
+
+document.getElementById('applyBgBtn').addEventListener('click', applyBackground);
+
+function applyBackground() {
+  if (!sourceImage) return;
+  const c = document.getElementById('mainCanvas');
+  const ctx = c.getContext('2d');
+
+  // Draw background first
+  if (bgType === 'color') {
+    ctx.fillStyle = document.getElementById('bgColorPicker').value;
+    ctx.fillRect(0, 0, c.width, c.height);
+  } else if (bgType === 'gradient') {
+    const angle = parseInt(document.getElementById('gradAngle').value);
+    const rad = angle * Math.PI / 180;
+    const x1 = c.width/2 - Math.cos(rad)*c.width/2, y1 = c.height/2 - Math.sin(rad)*c.height/2;
+    const x2 = c.width/2 + Math.cos(rad)*c.width/2, y2 = c.height/2 + Math.sin(rad)*c.height/2;
+    const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+    grad.addColorStop(0, document.getElementById('gradColor1').value);
+    grad.addColorStop(1, document.getElementById('gradColor2').value);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, c.width, c.height);
+  } else if (bgType === 'image' && bgImageEl) {
+    ctx.drawImage(bgImageEl, 0, 0, c.width, c.height);
+  } else if (bgType === 'video' && bgVideoEl) {
+    ctx.drawImage(bgVideoEl, 0, 0, c.width, c.height);
+  }
+
+  // Overlay original image on top
+  ctx.drawImage(sourceImage, 0, 0, c.width, c.height);
+  toast('✓ Background applied');
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const c = document.getElementById('mainCanvas');
+  if (!c || c.style.display === 'none') { toast('No image to export'); return; }
+  const a = document.createElement('a');
+  a.download = 'prism_export.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+  toast('✓ Exported as PNG');
+});
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
