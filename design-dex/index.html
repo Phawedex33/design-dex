@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Dex — Media Editor</title>
+  <meta name="description" content="In-browser image editor — filters, fragments, adjustments, background removal and more.">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════ -->
+  <header class="header">
+    <div class="header__logo">
+      <span class="header__logo-dot"></span>
+      Design Dex
+    </div>
+
+    <nav class="header__nav">
+      <button class="nav-pill active" data-tool="fragment">⬡ Fragment</button>
+      <button class="nav-pill" data-tool="filters">◈ Filters</button>
+      <button class="nav-pill" data-tool="adjust">◎ Adjust</button>
+      <button class="nav-pill" data-tool="background">✦ Background</button>
+      <button class="nav-pill" data-tool="text">✏ Text</button>
+      <button class="nav-pill" data-tool="crop">✂ Crop</button>
+      <button class="nav-pill" data-tool="history">↩ History</button>
+    </nav>
+
+    <div class="header__actions">
+      <button class="btn btn--export" id="exportBtn" disabled>↓ Export</button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════
+       LEFT DOCK
+  ══════════════════════════════════════════ -->
+  <aside class="dock">
+    <button class="dock__btn" id="uploadDockBtn">
+      ⬆
+      <span class="dock__tip">Upload</span>
+    </button>
+    <button class="dock__btn" id="undoBtn" disabled>
+      ↩
+      <span class="dock__tip">Undo (Ctrl+Z)</span>
+    </button>
+    <button class="dock__btn" id="redoBtn" disabled>
+      ↪
+      <span class="dock__tip">Redo (Ctrl+Y)</span>
+    </button>
+    <div class="dock__divider"></div>
+    <button class="dock__btn active" data-tool="fragment">
+      ⬡
+      <span class="dock__tip">Fragment</span>
+    </button>
+    <button class="dock__btn" data-tool="filters">
+      ◈
+      <span class="dock__tip">Filters</span>
+    </button>
+    <button class="dock__btn" data-tool="adjust">
+      ◎
+      <span class="dock__tip">Adjust</span>
+    </button>
+    <button class="dock__btn" data-tool="background">
+      ✦
+      <span class="dock__tip">Background</span>
+    </button>
+    <button class="dock__btn" data-tool="text">
+      ✏
+      <span class="dock__tip">Text</span>
+    </button>
+    <button class="dock__btn" data-tool="crop">
+      ✂
+      <span class="dock__tip">Crop</span>
+    </button>
+    <button class="dock__btn" data-tool="history">
+      ⏱
+      <span class="dock__tip">History</span>
+    </button>
+  </aside>
+
+  <!-- ══════════════════════════════════════════
+       CANVAS AREA
+  ══════════════════════════════════════════ -->
+  <section class="canvas-area" id="canvasArea">
+
+    <!-- Upload prompt (shown when no image loaded) -->
+    <div class="upload-prompt" id="uploadPrompt">
+      <div class="upload-prompt__ring" id="uploadRing">📁</div>
+      <h2>Drop media here</h2>
+      <p>or click the icon to browse</p>
+      <div class="upload-prompt__tags">
+        <span class="upload-prompt__tag">.jpg</span>
+        <span class="upload-prompt__tag">.png</span>
+        <span class="upload-prompt__tag">.webp</span>
+        <span class="upload-prompt__tag">.gif</span>
+        <span class="upload-prompt__tag">.mp4</span>
+        <span class="upload-prompt__tag">.webm</span>
+      </div>
+    </div>
+
+    <!-- Main canvas (image editing) -->
+    <canvas id="mainCanvas" class="canvas-area__media"></canvas>
+
+    <!-- Video preview -->
+    <video id="mainVideo" class="canvas-area__media" controls loop></video>
+
+    <!-- Crop overlay -->
+    <div class="crop-overlay" id="cropOverlay">
+      <div class="crop-selection" id="cropSelection"></div>
+    </div>
+
+    <!-- Puzzle fragment strip -->
+    <div class="fragment-strip" id="fragmentStrip"></div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       RIGHT PANEL — TOOL PANELS
+  ══════════════════════════════════════════ -->
+  <aside class="right-panel">
+
+    <!-- ── Fragment ── -->
+    <div class="tool-panel active" id="panel-fragment">
+      <div class="tool-panel__heading">// Puzzle Fragment</div>
+
+      <div class="card">
+        <div class="card__title">⬡ Grid</div>
+        <div class="slider-row">
+          <span class="slider-row__label">Columns</span>
+          <input type="range" id="gridCols" min="2" max="10" value="4">
+          <span class="slider-row__val" id="gridColsVal">4</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-row__label">Rows</span>
+          <input type="range" id="gridRows" min="2" max="10" value="4">
+          <span class="slider-row__val" id="gridRowsVal">4</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-row__label">Tab Size</span>
+          <input type="range" id="tabSz" min="6" max="32" value="16">
+          <span class="slider-row__val" id="tabSzVal">16</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__title">◩ Style</div>
+        <div class="puzzle-grid">
+          <button class="puzzle-btn active" data-pstyle="classic">Classic</button>
+          <button class="puzzle-btn" data-pstyle="wavy">Wavy</button>
+          <button class="puzzle-btn" data-pstyle="sharp">Sharp</button>
+          <button class="puzzle-btn" data-pstyle="round">Round</button>
+          <button class="puzzle-btn" data-pstyle="diamond">Diamond</button>
+          <button class="puzzle-btn" data-pstyle="random">Random</button>
+        </div>
+      </div>
+
+      <div class="progress hidden" id="fragProgress">
+        <div class="progress__track"><div class="progress__fill" id="fragProgressFill"></div></div>
+        <div class="progress__text" id="fragProgressText">Fragmenting...</div>
+      </div>
+
+      <button class="btn btn--primary btn--block" id="fragmentBtn" disabled>⬡ Fragment Image</button>
+      <div style="height:0.4rem;"></div>
+      <button class="btn btn--secondary btn--block" id="downloadFragBtn" disabled>↓ Download ZIP</button>
+    </div>
+
+    <!-- ── Filters ── -->
+    <div class="tool-panel" id="panel-filters">
+      <div class="tool-panel__heading">// Filters</div>
+
+      <div class="card">
+        <div class="card__title">⬛ Bitmap Effects</div>
+        <div class="filter-grid" id="filterGridBitmap"></div>
+      </div>
+      <div class="card">
+        <div class="card__title">◈ Colour Effects</div>
+        <div class="filter-grid" id="filterGridColor"></div>
+      </div>
+      <div class="card">
+        <div class="card__title">◎ Texture Effects</div>
+        <div class="filter-grid" id="filterGridTexture"></div>
+      </div>
+
+      <!-- Dynamic filter controls -->
+      <div class="card hidden" id="bitmapControls">
+        <div class="card__title">⬛ Threshold</div>
+        <div class="slider-row">
+          <span class="slider-row__label">Level</span>
+          <input type="range" id="bitmapThreshold" min="0" max="255" value="128">
+          <span class="slider-row__val" id="bitmapThresholdVal">128</span>
+        </div>
+      </div>
+      <div class="card hidden" id="edgeControls">
+        <div class="card__title">◈ Edge Strength</div>
+        <div class="slider-row">
+          <span class="slider-row__label">Strength</span>
+          <input type="range" id="edgeStrength" min="1" max="10" value="3">
+          <span class="slider-row__val" id="edgeStrengthVal">3</span>
+        </div>
+      </div>
+      <div class="card hidden" id="pixelateControls">
+        <div class="card__title">▦ Pixel Size</div>
+        <div class="slider-row">
+          <span class="slider-row__label">Size</span>
+          <input type="range" id="pixelateSize" min="2" max="40" value="8">
+          <span class="slider-row__val" id="pixelateSizeVal">8</span>
+        </div>
+      </div>
+      <div class="card hidden" id="noiseControls">
+        <div class="card__title">⁘ Noise Amount</div>
+        <div class="slider-row">
+          <span class="slider-row__label">Amount</span>
+          <input type="range" id="noiseAmount" min="0" max="150" value="40">
+          <span class="slider-row__val" id="noiseAmountVal">40</span>
+        </div>
+      </div>
+
+      <button class="btn btn--primary btn--block" id="applyFilterBtn" disabled>Apply Filter</button>
+      <div style="height:0.4rem;"></div>
+      <button class="btn btn--secondary btn--block" id="resetFilterBtn">Reset</button>
+    </div>
+
+    <!-- ── Adjust ── -->
+    <div class="tool-panel" id="panel-adjust">
+      <div class="tool-panel__heading">// Adjustments</div>
+
+      <div class="card">
+        <div class="card__title">☀ Light</div>
+        <div class="slider-row"><span class="slider-row__label">Brightness</span><input type="range" class="adj-slider" data-prop="brightness" min="0" max="200" value="100"><span class="slider-row__val adj-val">100</span></div>
+        <div class="slider-row"><span class="slider-row__label">Contrast</span><input type="range" class="adj-slider" data-prop="contrast" min="0" max="200" value="100"><span class="slider-row__val adj-val">100</span></div>
+        <div class="slider-row"><span class="slider-row__label">Exposure</span><input type="range" class="adj-slider" data-prop="exposure" min="-100" max="100" value="0"><span class="slider-row__val adj-val">0</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card__title">🎨 Colour</div>
+        <div class="slider-row"><span class="slider-row__label">Saturation</span><input type="range" class="adj-slider" data-prop="saturate" min="0" max="300" value="100"><span class="slider-row__val adj-val">100</span></div>
+        <div class="slider-row"><span class="slider-row__label">Hue</span><input type="range" class="adj-slider" data-prop="hue" min="-180" max="180" value="0"><span class="slider-row__val adj-val">0</span></div>
+        <div class="slider-row"><span class="slider-row__label">Temperature</span><input type="range" class="adj-slider" data-prop="temperature" min="-100" max="100" value="0"><span class="slider-row__val adj-val">0</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card__title">◎ Details</div>
+        <div class="slider-row"><span class="slider-row__label">Blur</span><input type="range" class="adj-slider" data-prop="blur" min="0" max="20" value="0"><span class="slider-row__val adj-val">0</span></div>
+        <div class="slider-row"><span class="slider-row__label">Vignette</span><input type="range" class="adj-slider" data-prop="vignette" min="0" max="100" value="0"><span class="slider-row__val adj-val">0</span></div>
+      </div>
+
+      <button class="btn btn--primary btn--block" id="applyAdjBtn" disabled>Apply Adjustments</button>
+      <div style="height:0.4rem;"></div>
+      <button class="btn btn--secondary btn--block" id="resetAdjBtn">Reset All</button>
+    </div>
+
+    <!-- ── Background ── -->
+    <div class="tool-panel" id="panel-background">
+      <div class="tool-panel__heading">// Background</div>
+
+      <div class="card">
+        <div class="card__title">✦ Type</div>
+        <div class="toggle-grid">
+          <button class="toggle-btn active" data-bg="color">🎨 Color</button>
+          <button class="toggle-btn" data-bg="gradient">◑ Gradient</button>
+          <button class="toggle-btn" data-bg="image">🖼 Image</button>
+          <button class="toggle-btn" data-bg="video">🎬 Video</button>
+        </div>
+      </div>
+
+      <div class="card" id="bgColorCard">
+        <div class="card__title">Color Fill</div>
+        <input type="color" id="bgColorPicker" value="#ffffff">
+      </div>
+      <div class="card hidden" id="bgGradCard">
+        <div class="card__title">Gradient</div>
+        <div class="slider-row">
+          <span class="slider-row__label">Angle</span>
+          <input type="range" id="gradAngle" min="0" max="360" value="135">
+          <span class="slider-row__val" id="gradAngleVal">135°</span>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+          <input type="color" id="gradColor1" value="#111111" style="flex:1;">
+          <input type="color" id="gradColor2" value="#888888" style="flex:1;">
+        </div>
+      </div>
+      <div class="card hidden" id="bgImageCard">
+        <div class="card__title">Image Background</div>
+        <button class="btn btn--secondary btn--block" id="uploadBgImageBtn">⬆ Upload Image</button>
+        <input type="file" id="bgImageFile" accept="image/*">
+      </div>
+      <div class="card hidden" id="bgVideoCard">
+        <div class="card__title">Video Background</div>
+        <button class="btn btn--secondary btn--block" id="uploadBgVideoBtn">⬆ Upload Video</button>
+        <input type="file" id="bgVideoFile" accept="video/*">
+      </div>
+
+      <div class="card">
+        <div class="card__title">✂️ AI Background Removal</div>
+        <p style="font-size:0.68rem;color:var(--ink-3);margin-bottom:0.6rem;font-family:var(--font-mono);">Runs in-browser. No API key needed.</p>
+        <div class="progress hidden" id="bgRemoveProgress">
+          <div class="progress__track"><div class="progress__fill" id="bgRemoveFill"></div></div>
+          <div class="progress__text" id="bgRemoveText">Loading model...</div>
+        </div>
+        <button class="btn btn--secondary btn--block" id="removeBgBtn" disabled>✂️ Remove Background</button>
+      </div>
+
+      <button class="btn btn--primary btn--block" id="applyBgBtn" disabled>Apply Background</button>
+    </div>
+
+    <!-- ── Text Overlay ── -->
+    <div class="tool-panel" id="panel-text">
+      <div class="tool-panel__heading">// Text Overlay</div>
+
+      <div class="card">
+        <div class="card__title">✏ Content</div>
+        <textarea class="text-input" id="textContent" rows="3" placeholder="Type your text..."></textarea>
+      </div>
+
+      <div class="card">
+        <div class="card__title">Aa Font</div>
+        <div style="margin-bottom:0.5rem;">
+          <select class="text-input" id="textFont">
+            <option value="Outfit">Outfit</option>
+            <option value="Georgia">Georgia (Serif)</option>
+            <option value="JetBrains Mono">JetBrains Mono</option>
+            <option value="Impact">Impact</option>
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times New Roman</option>
+          </select>
+        </div>
+        <div class="slider-row">
+          <span class="slider-row__label">Size</span>
+          <input type="range" id="textSize" min="10" max="200" value="48">
+          <span class="slider-row__val" id="textSizeVal">48</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-row__label">Opacity</span>
+          <input type="range" id="textOpacity" min="10" max="100" value="100">
+          <span class="slider-row__val" id="textOpacityVal">100</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__title">Colour & Style</div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+          <div style="flex:1;">
+            <div style="font-size:0.62rem;color:var(--ink-3);margin-bottom:0.3rem;">Fill</div>
+            <input type="color" id="textColor" value="#ffffff">
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:0.62rem;color:var(--ink-3);margin-bottom:0.3rem;">Stroke</div>
+            <input type="color" id="textStroke" value="#000000">
+          </div>
+        </div>
+        <div class="slider-row">
+          <span class="slider-row__label">Stroke W</span>
+          <input type="range" id="textStrokeWidth" min="0" max="10" value="0">
+          <span class="slider-row__val" id="textStrokeWidthVal">0</span>
+        </div>
+        <div class="toggle-grid" style="margin-top:0.5rem;">
+          <button class="toggle-btn" id="textBold">B Bold</button>
+          <button class="toggle-btn" id="textItalic">I Italic</button>
+          <button class="toggle-btn active" data-align="left">⬛ Left</button>
+          <button class="toggle-btn" data-align="center">⬛ Center</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__title">📍 Position</div>
+        <div class="slider-row">
+          <span class="slider-row__label">X</span>
+          <input type="range" id="textX" min="0" max="100" value="50">
+          <span class="slider-row__val" id="textXVal">50%</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-row__label">Y</span>
+          <input type="range" id="textY" min="0" max="100" value="50">
+          <span class="slider-row__val" id="textYVal">50%</span>
+        </div>
+      </div>
+
+      <button class="btn btn--primary btn--block" id="applyTextBtn" disabled>✏ Add Text</button>
+      <div style="height:0.4rem;"></div>
+      <button class="btn btn--secondary btn--block" id="clearTextBtn">Clear Text</button>
+    </div>
+
+    <!-- ── Crop & Resize ── -->
+    <div class="tool-panel" id="panel-crop">
+      <div class="tool-panel__heading">// Crop & Resize</div>
+
+      <div class="card">
+        <div class="card__title">✂ Crop</div>
+        <div class="toggle-grid">
+          <button class="toggle-btn active" data-aspect="free">Free</button>
+          <button class="toggle-btn" data-aspect="1:1">1:1</button>
+          <button class="toggle-btn" data-aspect="16:9">16:9</button>
+          <button class="toggle-btn" data-aspect="9:16">9:16</button>
+          <button class="toggle-btn" data-aspect="4:3">4:3</button>
+          <button class="toggle-btn" data-aspect="3:4">3:4</button>
+        </div>
+        <button class="btn btn--secondary btn--block" id="startCropBtn" disabled>Start Crop</button>
+        <div style="height:0.4rem;"></div>
+        <button class="btn btn--primary btn--block hidden" id="applyCropBtn">Apply Crop</button>
+        <button class="btn btn--secondary btn--block hidden" id="cancelCropBtn">Cancel</button>
+      </div>
+
+      <div class="card">
+        <div class="card__title">⤡ Resize</div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+          <div style="flex:1;">
+            <div style="font-size:0.62rem;color:var(--ink-3);margin-bottom:0.3rem;">Width (px)</div>
+            <input type="number" class="text-input" id="resizeW" placeholder="Width" min="1">
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:0.62rem;color:var(--ink-3);margin-bottom:0.3rem;">Height (px)</div>
+            <input type="number" class="text-input" id="resizeH" placeholder="Height" min="1">
+          </div>
+        </div>
+        <div class="toggle-btn active" id="lockAspect" style="margin-bottom:0.5rem;width:100%;justify-content:center;border:1px solid var(--glass-border);padding:0.4rem;">🔒 Lock Aspect Ratio</div>
+        <p style="font-size:0.62rem;color:var(--ink-3);font-family:var(--font-mono);margin-bottom:0.5rem;" id="resizeInfo">Original: —</p>
+        <button class="btn btn--primary btn--block" id="applyResizeBtn" disabled>Apply Resize</button>
+      </div>
+
+      <div class="card">
+        <div class="card__title">↻ Rotate & Flip</div>
+        <div class="toggle-grid">
+          <button class="toggle-btn" id="rotateLeft">↺ -90°</button>
+          <button class="toggle-btn" id="rotateRight">↻ +90°</button>
+          <button class="toggle-btn" id="flipH">↔ Flip H</button>
+          <button class="toggle-btn" id="flipV">↕ Flip V</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── History ── -->
+    <div class="tool-panel" id="panel-history">
+      <div class="tool-panel__heading">// Undo / Redo</div>
+
+      <div class="history-bar">
+        <span class="history-bar__label" id="historyLabel">No history yet</span>
+        <button class="btn btn--icon btn--secondary" id="undoBtnPanel" disabled title="Undo">↩</button>
+        <button class="btn btn--icon btn--secondary" id="redoBtnPanel" disabled title="Redo">↪</button>
+      </div>
+
+      <div class="card">
+        <div class="card__title">⌨ Shortcuts</div>
+        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.68rem;color:var(--ink-2);">Undo</span>
+            <div style="display:flex;gap:0.25rem;"><span class="kbd">Ctrl</span><span class="kbd">Z</span></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.68rem;color:var(--ink-2);">Redo</span>
+            <div style="display:flex;gap:0.25rem;"><span class="kbd">Ctrl</span><span class="kbd">Y</span></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.68rem;color:var(--ink-2);">Export</span>
+            <div style="display:flex;gap:0.25rem;"><span class="kbd">Ctrl</span><span class="kbd">S</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="historyList" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
+      <button class="btn btn--danger btn--block" id="clearHistoryBtn" style="margin-top:0.5rem;">Clear History</button>
+    </div>
+
+  </aside><!-- end right-panel -->
+</div><!-- end .app -->
+
+<!-- Hidden file inputs -->
+<input type="file" id="mainFileInput" accept="image/*,video/*">
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Scripts -->
+<script src="lib/jszip.min.js"></script>
+<script src="js/app.js"        type="module"></script>
+</body>
+</html>
